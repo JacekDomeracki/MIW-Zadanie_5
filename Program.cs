@@ -6,9 +6,6 @@ using System.Linq;
 
 namespace Zadanie_5
 {
-    using wEj_ProbkaTyp = ValueTuple<double, double>;
-    using wYj_ProbkaTyp = ValueTuple<double, double>;
-
     public class Neuron
     {
         public List<double> lista_wartosci_wag = new List<double>();
@@ -66,10 +63,12 @@ namespace Zadanie_5
             return 1 / (1 + Math.Exp(-beta * wartosc_bez_fa));
         }
 
-        public wYj_ProbkaTyp Oblicz_wyjscie_sieci_neuronowej(wEj_ProbkaTyp wej_probka, double beta)
+        public void Oblicz_wyjscie_sieci_neuronowej(List<double> wej_probka, double beta, ref List<double> wartosc_wyjscia_sieci)
         {
-            warstwy_neurony[0][0].wartosc_wyjscia = wej_probka.Item1;
-            warstwy_neurony[0][1].wartosc_wyjscia = wej_probka.Item2;            //...tyle podstawień ile liczność warstwy wejściowej
+            for (int i = 0; i < wej_probka.Count; i++)
+            {
+                warstwy_neurony[0][i].wartosc_wyjscia = wej_probka[i];
+            }
 
             for (int i = 1; i < warstwy_neurony.Length; i++)
             {
@@ -83,17 +82,19 @@ namespace Zadanie_5
                     warstwy_neurony[i][j].wartosc_wyjscia = Funkcja_aktywacji(beta, sum_wart_wyj);
                 }
             }
-            wYj_ProbkaTyp wartosc_wyjscia_sieci;
-            wartosc_wyjscia_sieci.Item1 = warstwy_neurony[warstwy_neurony.Length - 1][0].wartosc_wyjscia;
-            wartosc_wyjscia_sieci.Item2 = warstwy_neurony[warstwy_neurony.Length - 1][1].wartosc_wyjscia;            //...tyle podstawień ile liczność warstwy wyjściowej
-            return wartosc_wyjscia_sieci;
+            for (int i = 0; i < wartosc_wyjscia_sieci.Count; i++)
+            {
+                wartosc_wyjscia_sieci[i] = warstwy_neurony[warstwy_neurony.Length - 1][i].wartosc_wyjscia;
+
+            }
         }
 
-        public void Propaguj_wstecznie_korekty(wYj_ProbkaTyp wyj_probka, double beta, double mi)
+        public void Propaguj_wstecznie_korekty(List<double> wyj_probka, double beta, double mi)
         {
-            warstwy_neurony[warstwy_neurony.Length - 1][0].korekta_wyjscia = mi * (wyj_probka.Item1 - warstwy_neurony[warstwy_neurony.Length - 1][0].wartosc_wyjscia);
-            warstwy_neurony[warstwy_neurony.Length - 1][1].korekta_wyjscia = mi * (wyj_probka.Item2 - warstwy_neurony[warstwy_neurony.Length - 1][1].wartosc_wyjscia);
-            //...tyle podstawień ile liczność warstwy wyjściowej
+            for (int i = 0; i < wyj_probka.Count; i++)
+            {
+                warstwy_neurony[warstwy_neurony.Length - 1][i].korekta_wyjscia = mi * (wyj_probka[i] - warstwy_neurony[warstwy_neurony.Length - 1][i].wartosc_wyjscia);
+            }
 
             for (int i = warstwy_neurony.Length - 1; i > 0; i--)
             {
@@ -125,7 +126,7 @@ namespace Zadanie_5
                     }
                 }
             }
-            for (int i = 1; i < warstwy_neurony.Length; i++)
+            for (int i = 1; i < warstwy_neurony.Length; i++)            //korekta wszystkich wag sieci
             {
                 for (int j = 0; j < warstwy_neurony[i].Count; j++)
                 {
@@ -172,14 +173,14 @@ namespace Zadanie_5
             Console.WriteLine("ALGORYTM WSTECZNEJ PROPAGACJI ( ZADANIE 2 )");
             Console.WriteLine();
 
-            Dictionary<wEj_ProbkaTyp, wYj_ProbkaTyp> Probki_funkcji_xornor = new Dictionary<wEj_ProbkaTyp, wYj_ProbkaTyp>
+            List<Tuple<List<double>, List<double>>> Probki_funkcji_xornor = new List<Tuple<List<double>, List<double>>>
             {
-                { (0, 0), (0, 1) },
-                { (0, 1), (1, 0) },
-                { (1, 0), (1, 0) },
-                { (1, 1), (0, 0) }
+                new Tuple<List<double>, List<double>> ( new List<double> { 0, 0 }, new List<double> { 0, 1 } ),
+                new Tuple<List<double>, List<double>> ( new List<double> { 0, 1 }, new List<double> { 1, 0 } ),
+                new Tuple<List<double>, List<double>> ( new List<double> { 1, 0 }, new List<double> { 1, 0 } ),
+                new Tuple<List<double>, List<double>> ( new List<double> { 1, 1 }, new List<double> { 0, 0 } )
             };
-            KeyValuePair<wEj_ProbkaTyp, wYj_ProbkaTyp> probka_rob;
+            Tuple<List<double>, List<double>> probka_rob;
 
             Siec_neuronowa SN = new Siec_neuronowa(SCHEMAT_SIECI_NEURONOWEJ);
             SN.Ustaw_losowe_wartosci_wag(PRZEDZ_MIN, PRZEDZ_MAX);
@@ -189,10 +190,11 @@ namespace Zadanie_5
 
             Random random = new Random();
             List<int> indeksy_probek = new List<int>();
-            int n_pr = 0;
-            wYj_ProbkaTyp wartosc_wyjscia_SN;
-            wYj_ProbkaTyp nowa_wartosc_wyjscia_SN;
-            wYj_ProbkaTyp blizej_do_probki_wyj = (0, 0);
+            int n_pr;
+
+            List<double> wartosc_wyjscia_SN = new List<double>(Probki_funkcji_xornor[0].Item2);             //muszą być zainicjowane
+            List<double> nowa_wartosc_wyjscia_SN = new List<double>(Probki_funkcji_xornor[0].Item2);
+            List<double> blizej_do_probki_wyj = new List<double>(Probki_funkcji_xornor[0].Item2);
 
             for (int i = 0; i < ILE_ITERACJE; i++)
             {
@@ -207,23 +209,24 @@ namespace Zadanie_5
                     n_pr = indeksy_probek[random.Next(indeksy_probek.Count)];
                     indeksy_probek.Remove(n_pr);
 
-                    probka_rob = Probki_funkcji_xornor.OrderBy(x => x.Key).ElementAt(n_pr);
-                    wartosc_wyjscia_SN = SN.Oblicz_wyjscie_sieci_neuronowej(probka_rob.Key, BETA);
+                    probka_rob = Probki_funkcji_xornor[n_pr];
+                    SN.Oblicz_wyjscie_sieci_neuronowej(probka_rob.Item1, BETA, ref wartosc_wyjscia_SN);
 
-                    SN.Propaguj_wstecznie_korekty(probka_rob.Value, BETA, MI);
-                    nowa_wartosc_wyjscia_SN = SN.Oblicz_wyjscie_sieci_neuronowej(probka_rob.Key, BETA);
+                    SN.Propaguj_wstecznie_korekty(probka_rob.Item2, BETA, MI);
+                    SN.Oblicz_wyjscie_sieci_neuronowej(probka_rob.Item1, BETA, ref nowa_wartosc_wyjscia_SN);
 
-                    blizej_do_probki_wyj.Item1 = Math.Abs(probka_rob.Value.Item1 - wartosc_wyjscia_SN.Item1) - Math.Abs(probka_rob.Value.Item1 - nowa_wartosc_wyjscia_SN.Item1);
-                    blizej_do_probki_wyj.Item2 = Math.Abs(probka_rob.Value.Item2 - wartosc_wyjscia_SN.Item2) - Math.Abs(probka_rob.Value.Item2 - nowa_wartosc_wyjscia_SN.Item2);
-                    //...tyle podstawień ile liczność warstwy wyjściowej
+                    for (int k = 0; k < probka_rob.Item2.Count; k++)
+                    {
+                        blizej_do_probki_wyj[k] = Math.Abs(probka_rob.Item2[k] - wartosc_wyjscia_SN[k]) - Math.Abs(probka_rob.Item2[k] - nowa_wartosc_wyjscia_SN[k]);
+                    }
 
                     if (i < ILE_WID_GD || i >= ILE_ITERACJE - ILE_WID_GD)
                     {
-                        Console.WriteLine("------>  PRÓBKA NR : {0}  |  NOWE WYJŚCIE : {1,8:F6}  |  UBYTEK BŁĘDU : {2,12:F10}  |  NOWY BŁĄD: {3,9:F6}",
-                            n_pr + 1, nowa_wartosc_wyjscia_SN.Item1, blizej_do_probki_wyj.Item1, probka_rob.Value.Item1 - nowa_wartosc_wyjscia_SN.Item1);
-                        Console.WriteLine("------>  PRÓBKA NR : {0}  |  NOWE WYJŚCIE : {1,8:F6}  |  UBYTEK BŁĘDU : {2,12:F10}  |  NOWY BŁĄD: {3,9:F6}",
-                            n_pr + 1, nowa_wartosc_wyjscia_SN.Item2, blizej_do_probki_wyj.Item2, probka_rob.Value.Item2 - nowa_wartosc_wyjscia_SN.Item2);
-                        //...tyle podstawień ile liczność warstwy wyjściowej
+                        for (int k = 0; k < probka_rob.Item2.Count; k++)
+                        {
+                            Console.WriteLine("------>  PRÓBKA NR : {0}  |  NOWE WYJŚCIE : {1,8:F6}  |  UBYTEK BŁĘDU : {2,12:F10}  |  NOWY BŁĄD: {3,9:F6}",
+                                n_pr + 1, nowa_wartosc_wyjscia_SN[k], blizej_do_probki_wyj[k], probka_rob.Item2[k] - nowa_wartosc_wyjscia_SN[k]);
+                        }
                     }
                 }
                 if (i < ILE_WID_GD || i >= ILE_ITERACJE - ILE_WID_GD) Console.WriteLine();
@@ -232,16 +235,15 @@ namespace Zadanie_5
             n_pr = 0;
             foreach (var probka in Probki_funkcji_xornor)
             {
-                wartosc_wyjscia_SN = SN.Oblicz_wyjscie_sieci_neuronowej(probka.Key, BETA);
-                if (Math.Abs(probka.Value.Item1 - wartosc_wyjscia_SN.Item1) >= MARGINES_BLEDU)
+                SN.Oblicz_wyjscie_sieci_neuronowej(probka.Item1, BETA, ref wartosc_wyjscia_SN);
+
+                for (int i = 0; i < probka.Item2.Count; i++)
                 {
-                    n_pr++;
+                    if (Math.Abs(probka.Item2[i] - wartosc_wyjscia_SN[i]) >= MARGINES_BLEDU)
+                    {
+                        n_pr++;
+                    }
                 }
-                if (Math.Abs(probka.Value.Item2 - wartosc_wyjscia_SN.Item2) >= MARGINES_BLEDU)
-                {
-                    n_pr++;
-                }
-                //...tyle if-ów ile liczność warstwy wyjściowej
             }
             Console.WriteLine("---------->  MARGINES BŁĘDU : {0,6:F4}", MARGINES_BLEDU);
             if (n_pr == 0)
